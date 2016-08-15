@@ -1,0 +1,24 @@
+---
+# book metadata
+title: The Elements of Typographic Style
+authors:
+  - Robert Bringhurst
+pages:
+  - title: The Grand Design
+    path: 'the-grand-design.md'
+  # - title: Rhythm and Proportion
+  #   path: 'rhythm-and-proportion.md'
+  #   pages:
+  #     - title: Horizontal Motion
+  #       path: 'rhythm-and-proportion.md#horizontal-motion'
+
+
+# pica metadata
+pica_version: 0.1
+pica_warn_on_unlinked: true
+pica_plugins:
+  - plugin_a
+  - plugin_b
+  - plugin_c
+pica_src_dir: 'pages'
+pica_dest_dir: '_publish'

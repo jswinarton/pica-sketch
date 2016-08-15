@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+
+require 'kramdown'
+require 'pathname'
+require 'pry'
+require 'yaml'
+
+config = YAML.load(File.read('config.yml'))
+
+
+def src_file_from_path(path, config)
+  Pathname(config['pica_src_dir']).join(path).expand_path
+end
+
+def dest_file_from_path(path, config)
+  Pathname(config['pica_dest_dir']).join(path).expand_path.sub_ext('.html')
+end
+
+def parse_pages(config)
+  config['pages'].each do |page|
+    src_file = src_file_from_path(page['path'], config)
+    dest_file = dest_file_from_path(page['path'], config)
+    md = File.read src_file
+    html = Kramdown::Document.new(md).to_html
+    File.write dest_file, html
+
+    parse_pages(page['pages']) if page['pages']
+  end
+end
+
+parse_pages config
