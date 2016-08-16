@@ -1,31 +1,79 @@
 #!/usr/bin/env ruby
 
+require 'fileutils'
 require 'kramdown'
 require 'pathname'
 require 'pry'
 require 'yaml'
 
-config = YAML.load(File.read('config.yml'))
+class Pica
+  def initialize(path='.', config_file: 'config.yml')
+    # NOTE: not sure if we need to store this as an attribute
+    @config_path = Pathname.new(path).join(config_file).expand_path
+    @config = Pica::Config.from_yaml(@config_path)
+  end
 
+  def generate
+    @config['pages'].each { |page| generate_recursive(page) }
+  end
 
-def src_file_from_path(path, config)
-  Pathname(config['pica_src_dir']).join(path).expand_path
-end
+  def self.generate
+    self.new.generate
+  end
 
-def dest_file_from_path(path, config)
-  Pathname(config['pica_dest_dir']).join(path).expand_path.sub_ext('.html')
-end
+  private
 
-def parse_pages(config)
-  config['pages'].each do |page|
-    src_file = src_file_from_path(page['path'], config)
-    dest_file = dest_file_from_path(page['path'], config)
-    md = File.read src_file
-    html = Kramdown::Document.new(md).to_html
-    File.write dest_file, html
+  def generate_recursive(page)
+    src_file = @config.src_file_for_path(page['path'])
+    dest_file = @config.dest_file_for_path(page['path'])
 
-    parse_pages(page['pages']) if page['pages']
+    content = File.read src_file
+    output = Kramdown::Document.new(content).to_html
+
+    FileUtils.mkdir_p dest_file.dirname
+    File.write dest_file, output
+
+    generate_recursive(page) if page['pages']
   end
 end
 
-parse_pages config
+
+class Pica::Config
+  def initialize(config)
+    validate_config(config)
+    @config = config
+  end
+
+  def [](key)
+    @config[key]
+  end
+
+  def src_file_for_path(path)
+    Pathname(@config['pica_src_dir'])
+      .join(path)
+      .expand_path
+  end
+
+  def dest_file_for_path(path)
+    Pathname(@config['pica_dest_dir'])
+      .join(path)
+      .expand_path
+      .sub_ext(@config['pica_publish_format_ext'])
+  end
+
+  def self.from_yaml(config_filepath)
+    self.new YAML.load(File.read(config_filepath))
+  end
+
+  private
+
+  def validate_config(config)
+
+  end
+end
+
+
+class Pica::Config::InvalidConfigError < StandardError
+end
+
+Pica.generate
