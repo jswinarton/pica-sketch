@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'erb'
 require 'fileutils'
 require 'kramdown'
 require 'pathname'
@@ -7,6 +8,8 @@ require 'pry'
 require 'yaml'
 
 class Pica
+  VERSION = '0.1.0'
+
   def initialize(path='.', config_file: 'config.yml')
     # NOTE: not sure if we need to store this as an attribute
     @config_path = Pathname.new(path).join(config_file).expand_path
@@ -27,14 +30,20 @@ class Pica
     src_file = @config.src_file_for_path(page['path'])
     dest_file = @config.dest_file_for_path(page['path'])
 
-    content = File.read src_file
-    output = Kramdown::Document.new(content).to_html
+    input = File.read src_file
+    content = Kramdown::Document.new(input).to_html
+
+    templated = Pica::Template.render(content, @config)
 
     FileUtils.mkdir_p dest_file.dirname
-    File.write dest_file, output
+    File.write dest_file, templated
 
     generate_recursive(page) if page['pages']
   end
+end
+
+
+class Pica::Config::InvalidConfigError < StandardError
 end
 
 
@@ -73,7 +82,22 @@ class Pica::Config
 end
 
 
-class Pica::Config::InvalidConfigError < StandardError
+class Pica::Template
+  def initialize(content, config)
+    @content = content
+    @config = config
+
+    @template = ERB.new(File.read('template.html'))
+  end
+
+  def render
+    @template.result(binding)
+  end
+
+  def self.render(content, config)
+    self.new(content, config).render
+  end
 end
+
 
 Pica.generate
